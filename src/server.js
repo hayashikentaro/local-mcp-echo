@@ -6,6 +6,8 @@ const FALLBACK_PROTOCOL_VERSION = "2024-11-05";
 
 let buffer = "";
 
+log("server starting");
+
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => {
   buffer += chunk;
@@ -118,6 +120,8 @@ function callTool(params = {}) {
     throw rpcError(-32602, `Unknown tool: ${params.name}`);
   }
 
+  log("ping called");
+
   const args = params.arguments ?? {};
   if (typeof args !== "object" || Array.isArray(args)) {
     throw rpcError(-32602, "Tool arguments must be an object.");
@@ -132,15 +136,25 @@ function callTool(params = {}) {
     throw rpcError(-32602, "message must be 200 characters or fewer.");
   }
 
-  const suffix = message ? `: ${message}` : "";
-  return {
+  const payload = {
+    ok: true,
+    source: SERVER_NAME,
+    received_message: message ?? null,
+    timestamp: new Date().toISOString(),
+    pid: process.pid,
+  };
+
+  const result = {
     content: [
       {
         type: "text",
-        text: `pong${suffix}`,
+        text: JSON.stringify(payload, null, 2),
       },
     ],
   };
+
+  log("ping completed");
+  return result;
 }
 
 function writeResult(id, result) {
@@ -161,4 +175,8 @@ function rpcError(code, message, data) {
   error.code = code;
   error.data = data;
   return error;
+}
+
+function log(message) {
+  process.stderr.write(`[${new Date().toISOString()}] ${message}\n`);
 }

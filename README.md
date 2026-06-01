@@ -48,15 +48,145 @@ Arguments:
 
 Response:
 
-```text
-pong
+```json
+{
+  "ok": true,
+  "source": "local-mcp-echo",
+  "received_message": null,
+  "timestamp": "2026-06-01T00:00:00.000Z",
+  "pid": 12345
+}
 ```
 
-or, when `message` is provided:
+When `message` is provided, `received_message` contains the same string. The
+response is returned as MCP text content containing formatted JSON so it is easy
+to inspect from ChatGPT.
+
+## Secure MCP Tunnel
+
+This repository is designed to be run behind the OpenAI Secure MCP Tunnel using
+`tunnel-client` on the same Mac as this local stdio server.
+
+### 1. Initialize the tunnel client
+
+From this repository directory:
+
+```bash
+tunnel-client init
+```
+
+Follow the prompts from `tunnel-client`. Keep any generated local configuration
+out of git unless the tunnel-client documentation explicitly says it is safe to
+commit.
+
+### 2. Check the local setup
+
+```bash
+tunnel-client doctor
+```
+
+Use `doctor` before opening ChatGPT. It should confirm that the tunnel client can
+authenticate, reach the OpenAI tunnel service, and start the local stdio command.
+
+### 3. Run the tunnel
+
+Use this server as the stdio command:
+
+```bash
+tunnel-client run -- node ./src/server.js
+```
+
+Leave this process running while testing from ChatGPT.
+
+Important: stdout is reserved for MCP JSON-RPC messages only. Human-readable
+runtime logs are written to stderr.
+
+Expected stderr logs:
 
 ```text
-pong: <message>
+[2026-06-01T00:00:00.000Z] server starting
+[2026-06-01T00:00:01.000Z] ping called
+[2026-06-01T00:00:01.001Z] ping completed
 ```
+
+### 4. Connect from ChatGPT
+
+In ChatGPT, use a surface that supports custom MCP connectors and tunnel
+connectors.
+
+1. Open ChatGPT settings.
+2. Enable Developer mode if required for custom MCP connectors.
+3. Go to Apps / Connectors settings.
+4. Create a custom connector.
+5. Choose `Tunnel` as the connector type.
+6. Select or enter the tunnel created by `tunnel-client`.
+7. Save the connector and start a new chat with it enabled.
+8. Ask ChatGPT to call the `ping` tool with a short message.
+
+If successful, ChatGPT should show a JSON text result containing:
+
+- `ok`
+- `source`
+- `received_message`
+- `timestamp`
+- `pid`
+
+## Troubleshooting
+
+Use this order to isolate where a failure is happening.
+
+### Local server
+
+Run the smoke test:
+
+```bash
+npm run smoke
+```
+
+If this fails, the issue is in the local Node server or local Node runtime.
+
+### Tunnel client
+
+Run:
+
+```bash
+tunnel-client doctor
+```
+
+If `doctor` fails, fix authentication, tunnel configuration, network access, or
+the stdio command before testing from ChatGPT.
+
+### Tunnel process
+
+Run:
+
+```bash
+tunnel-client run -- node ./src/server.js
+```
+
+If the process starts but ChatGPT cannot call `ping`, watch stderr:
+
+- `server starting` means the local server launched.
+- `ping called` means a tool call reached the local server.
+- `ping completed` means the local server returned the MCP tool response.
+
+If `server starting` appears but `ping called` does not, the request is not
+reaching the local stdio server. Check the ChatGPT connector selection and tunnel
+status.
+
+If `ping called` appears but `ping completed` does not, the server rejected the
+arguments or failed while building the response. Check the JSON-RPC error shown
+in ChatGPT or the tunnel-client logs.
+
+### ChatGPT connector
+
+If local smoke tests and `tunnel-client doctor` pass, but ChatGPT does not show
+the tool:
+
+- Confirm the connector is saved and enabled in the current chat.
+- Confirm `Tunnel` was selected as the connector type.
+- Start a new chat after changing connector settings.
+- Ask explicitly: `Call the ping tool with message "hello tunnel".`
 
 ## Example stdio command
 

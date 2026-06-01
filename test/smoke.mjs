@@ -65,11 +65,26 @@ try {
     arguments: { message: "secure tunnel" },
   });
   const ping = await nextResponse();
-  assert.equal(ping.result.content[0].text, "pong: secure tunnel");
+  const payload = JSON.parse(ping.result.content[0].text);
+  assert.deepEqual(Object.keys(payload), [
+    "ok",
+    "source",
+    "received_message",
+    "timestamp",
+    "pid",
+  ]);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.source, "local-mcp-echo");
+  assert.equal(payload.received_message, "secure tunnel");
+  assert.match(payload.timestamp, /^\d{4}-\d{2}-\d{2}T/);
+  assert.equal(typeof payload.pid, "number");
 
   child.stdin.end();
   const [code] = await once(child, "exit");
   assert.equal(code, 0, stderr.join(""));
+  assert.match(stderr.join(""), /server starting/);
+  assert.match(stderr.join(""), /ping called/);
+  assert.match(stderr.join(""), /ping completed/);
   console.log("smoke ok");
 } finally {
   child.kill();
