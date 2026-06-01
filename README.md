@@ -16,6 +16,11 @@ The server intentionally exposes only one tool: `ping`.
 
 - Node.js 18 or newer
 - No npm dependencies
+- Optional: `tunnel-client`, if you have access to OpenAI Secure MCP Tunnel tooling
+
+This repository does not install or vendor `tunnel-client`. If
+`command -v tunnel-client` prints nothing, the Secure MCP Tunnel steps below
+cannot be run from this repo yet.
 
 ## Run locally
 
@@ -67,6 +72,46 @@ to inspect from ChatGPT.
 This repository is designed to be run behind the OpenAI Secure MCP Tunnel using
 `tunnel-client` on the same Mac as this local stdio server.
 
+### Current local finding
+
+On this Mac, `tunnel-client` was not found:
+
+```text
+/bin/bash: tunnel-client: command not found
+```
+
+The following locations were also checked:
+
+- `/usr/local/bin`
+- `/opt/homebrew/bin`
+- `~/.local/bin`
+
+No `tunnel-client` binary was present. Until the OpenAI tunnel client is
+installed or its absolute path is known, use the local smoke test only.
+
+### 0. Verify the tunnel client exists
+
+Before running any tunnel command:
+
+```bash
+command -v tunnel-client
+```
+
+Expected result:
+
+```text
+/path/to/tunnel-client
+```
+
+If there is no output, stop here. Install the tunnel client using the official
+instructions for the OpenAI surface that granted Secure MCP Tunnel access, or
+run the commands below with the absolute path to the binary if it is installed
+outside your `PATH`.
+
+Do not install an arbitrary package named `tunnel-client` from a package manager
+unless the OpenAI instructions explicitly identify that package as the tunnel
+client.
+
 ### 1. Initialize the tunnel client
 
 From this repository directory:
@@ -75,6 +120,7 @@ From this repository directory:
 tunnel-client init
 ```
 
+If your binary is not on `PATH`, replace `tunnel-client` with its absolute path.
 Follow the prompts from `tunnel-client`. Keep any generated local configuration
 out of git unless the tunnel-client documentation explicitly says it is safe to
 commit.
@@ -87,6 +133,8 @@ tunnel-client doctor
 
 Use `doctor` before opening ChatGPT. It should confirm that the tunnel client can
 authenticate, reach the OpenAI tunnel service, and start the local stdio command.
+If this command is unavailable, the tunnel client is still missing or not on
+`PATH`.
 
 ### 3. Run the tunnel
 
@@ -146,6 +194,17 @@ npm run smoke
 If this fails, the issue is in the local Node server or local Node runtime.
 
 ### Tunnel client
+
+First check whether the command exists:
+
+```bash
+command -v tunnel-client
+```
+
+If there is no output, the failure is before MCP or ChatGPT. The local echo
+server can still be tested with `npm run smoke`, but ChatGPT cannot reach it
+through the Secure MCP Tunnel until the tunnel client is installed or its
+absolute path is used.
 
 Run:
 
